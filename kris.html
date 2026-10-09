@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kris på Campus</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body{margin:0 auto;max-width:520px;padding:16px;min-height:100vh;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:linear-gradient(160deg,#4c1d95,#be185d 60%,#f59e0b)}
+h1{font-size:24px;margin:4px 0 6px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.pill{background:rgba(255,255,255,.18);border-radius:20px;padding:6px 12px;font-weight:600}
+.card{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:14px;margin-bottom:12px}
+.who{display:flex;gap:12px;align-items:center}
+.av{font-size:38px}
+.nm{font-weight:700;font-size:18px}
+.sub{font-size:13px;opacity:.85}
+.bar{height:10px;background:rgba(255,255,255,.2);border-radius:6px;overflow:hidden;margin:10px 0 4px}
+.bar>div{height:100%;background:#fb7185;border-radius:6px;transition:width .4s}
+button{font:inherit;border:0;border-radius:12px;padding:11px 14px;background:#fff;color:#4c1d95;font-weight:700;cursor:pointer}
+button:disabled{opacity:.4}
+button.big{width:100%;margin-top:8px}
+button.go{background:#fde047;color:#422006}
+.line{font-size:18px;line-height:1.45}
+.opt{display:block;width:100%;margin-top:8px;text-align:left}
+.delta{font-size:22px;font-weight:800;margin:10px 0}
+.date{background:rgba(253,224,71,.2);border:1px solid #fde047;border-radius:14px;padding:12px;margin-top:10px}
+.center{text-align:center}
+</style>
+</head>
+<body>
+<div id="v"></div>
+<script>
+const NAME='Kris',DAYS=5,SAVE='kris-v1';
+const LOCS=['Caféet ☕','Biblioteket 📖','Gymmet 🏋️','Kampusgården 🌳'];
+const LV=[[15,'Okänd'],[40,'Bekant'],[65,'Kompis'],[85,'Nära'],[999,'Kär 💘']];
+const ST={skamt:'Skämta lite 😄',charm:'Ge en komplimang ✨',arlig:'Var ärlig om vad du känner 💬',dristig:'Flörta dristigt 😏'};
+const C=[
+{n:'Elias',e:'📚',t:'Blyg bokmal',like:{skamt:1,charm:2,arlig:3,dristig:-2},
+ open:["Elias tittar upp från sin bok: 'Åh... hej. Sitter du här ofta?'","Elias rodnar lite. 'Jag, eh, hittade en bok som påminde mig om dig.'","Elias: 'Vill du läsa med mig en stund? Du behöver inte prata.'"],
+ good:{skamt:"Elias fnissar tyst och glömmer att vara nervös. 'Du är rolig, vet du det?'",charm:"Elias tittar på sina skor och ler brett. 'Det var... väldigt fint sagt.'",arlig:"Elias lägger ner boken. 'Tack för att du säger det rakt. Jag känner likadant.'",dristig:"Elias blir knallröd men ser inte bort. 'Wow. Okej. Det fungerade faktiskt.'"},
+ ok:"Elias nickar och småler artigt. 'Mm. Okej.'",bad:"Elias drar sig bakåt med boken framför ansiktet. 'Det blev lite mycket nu...'",
+ date:"Elias bjuder på en picknick med bok och termos under det stora trädet. Ni läser högt för varandra tills det blir mörkt. 💕"},
+{n:'Max',e:'😎',t:'Självsäker idrottare',like:{skamt:2,charm:0,arlig:-1,dristig:3},
+ open:["Max snurrar en boll på fingret. 'Ser man på. Vågar du försöka hänga med mig?'","Max lutar sig mot väggen. 'Alla pratar om mig, men du verkar inte bry dig. Intressant.'","Max: 'Jag har ett lag att leda, men jag kan ge dig fem minuter.'"],
+ good:{skamt:"Max skrattar högt. 'Okej, den där var bra! Du är inte som de andra.'",charm:"Max höjer ett ögonbryn men ler snett. 'Smickra mig mer. Jag tar det.'",arlig:"Max blir tyst en sekund. 'Ärligt talat, det är sällan någon är så rak mot mig.'",dristig:"Max flinar brett. 'Där ser man, du har mod. Jag gillar det.'"},
+ ok:"Max ryckar på axlarna. 'Okej. Inte illa.'",bad:"Max himlar med ögonen. 'Försök lite hårdare nästa gång.'",
+ date:"Max tar dig till arenan efter stängning och lär dig skjuta straffar. Sedan sitter ni på läktaren och delar en påse chips. 💕"},
+{n:'Theo',e:'🎨',t:'Drömsk konstnär',like:{skamt:-1,charm:3,arlig:2,dristig:1},
+ open:["Theo målar på en canvas och tittar upp. 'Stå still en sekund. Ljuset är perfekt på dig.'","Theo: 'Jag drömde om dig i natt. Eller kanske var det någon som liknade dig.'","Theo viftar med penseln. 'Berätta något som du aldrig sagt högt.'"],
+ good:{skamt:"Theo skrattar så att penseln ramlar. 'Du är som en färg jag inte hade.'",charm:"Theo blir alldeles stilla. 'Du ser verkligen. Ingen har sett mig så här förut.'",arlig:"Theo ler mjukt. 'Det där var vackert. Det ska jag måla.'",dristig:"Theo lyfter blicken, förvånad och glad. 'Oj. Du är ännu mer spännande än jag trodde.'"},
+ ok:"Theo ler förvirrat. 'Hm, intressant.'",bad:"Theo ser lite frånvarande ut. 'Åh... jag tappade tråden.'",
+ date:"Theo tar dig till taket på konsthallen, med filtar och en projektor. Ni ser stjärnorna och han målar ett litet hjärta på din hand. 💕"},
+{n:'Leo',e:'🎧',t:'Skämtsam musikstudent',like:{skamt:3,charm:1,arlig:0,dristig:2},
+ open:["Leo tar av sig hörlurarna. 'Du måste höra min nya låt. Den är bra. Eller dålig. Du bestämmer.'","Leo: 'Om du var ett ackord, vilket skulle du vara? Svara noga.'","Leo klappar på platsen bredvid sig. 'Jag har två hörlurar och en kompis som saknas.'"],
+ good:{skamt:"Leo tjuter av skratt. 'Okej, du måste vara med i mitt band.'",charm:"Leo lägger handen på bröstet. 'Stopp, mitt hjärta missade ett slag.'",arlig:"Leo blir lugn och mjuk i rösten. 'Tack. Det betyder mer än du tror.'",dristig:"Leo höjer ett ögonbryn och ler. 'Oj, kapten Dristig! Jag gillar det.'"},
+ ok:"Leo spelar ett litet trumsolo på bordet. 'Okej, rolig stund.'",bad:"Leo skrattar nervöst. 'Haha... okej... det där landade inte riktigt.'",
+ date:"Leo tar dig till övningsrummet och spelar sin nya låt för bara dig. På sista versen ändrar han texten så att den handlar om dig. 💕"}
+];
+const $v=document.getElementById('v');
+const fresh=()=>({day:1,ap:3,rel:[0,0,0,0],talked:[0,0,0,0],dated:[0,0,0,0],over:false});
+let G;try{G=JSON.parse(localStorage.getItem(SAVE))||fresh()}catch(e){G=fresh()}
+const save=()=>{try{localStorage.setItem(SAVE,JSON.stringify(G))}catch(e){}};
+const lvl=r=>LV.find(l=>r<l[0])[1];
+const total=()=>G.rel.reduce((a,b)=>a+b,0);
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const loc=i=>LOCS[(G.day+i)%4];
+function kris(h){
+  return `<svg width="${Math.round(h*100/170)}" height="${h}" viewBox="0 0 100 170" xmlns="http://www.w3.org/2000/svg" aria-label="${NAME}">
+  <defs><pattern id="pl" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#476b3c"/><rect y="4" width="12" height="4" fill="#7b4a22" opacity=".8"/><rect x="4" width="4" height="12" fill="#7b4a22" opacity=".8"/></pattern></defs>
+  <ellipse cx="39" cy="161" rx="12" ry="5" fill="#4a2f1b"/><ellipse cx="61" cy="161" rx="12" ry="5" fill="#4a2f1b"/>
+  <rect x="29" y="100" width="20" height="60" rx="5" fill="#8b7d55"/><rect x="51" y="100" width="20" height="60" rx="5" fill="#8b7d55"/>
+  <rect x="30" y="122" width="10" height="13" rx="2" fill="#7a6d48" stroke="#5f5438" stroke-width="1"/><rect x="60" y="122" width="10" height="13" rx="2" fill="#7a6d48" stroke="#5f5438" stroke-width="1"/>
+  <rect x="24" y="58" width="52" height="50" rx="10" fill="url(#pl)"/>
+  <rect x="11" y="62" width="15" height="42" rx="7" fill="url(#pl)"/><rect x="74" y="62" width="15" height="42" rx="7" fill="url(#pl)"/>
+  <circle cx="18" cy="108" r="6" fill="#f1c9a5"/><circle cx="82" cy="108" r="6" fill="#f1c9a5"/>
+  <rect x="44" y="50" width="12" height="12" fill="#e5b690"/>
+  <path d="M41 58 L50 72 L59 58 Z" fill="#355230"/><line x1="50" y1="72" x2="50" y2="106" stroke="#2c4527" stroke-width="1.5"/>
+  <ellipse cx="50" cy="34" rx="19" ry="22" fill="#f1c9a5"/>
+  <path d="M30 32 C27 12 43 5 52 7 C68 7 74 20 70 34 C66 26 62 22 50 22 C38 22 34 26 30 32 Z" fill="#5a3820"/>
+  <path d="M31 36 C31 54 40 59 50 59 C60 59 69 54 69 36 C66 44 62 46 50 46 C38 46 34 44 31 36 Z" fill="#4b2e1a"/>
+  <path d="M43 48 Q50 53 57 48" stroke="#e8b9a0" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="43" cy="33" r="2.2" fill="#2b1b10"/><circle cx="57" cy="33" r="2.2" fill="#2b1b10"/>
+  <path d="M39 27 L47 26 M53 26 L61 27" stroke="#4b2e1a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M50 35 Q52 40 49 41" stroke="#d9a47c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function map(){
+  if(G.over)return end();
+  $v.innerHTML=`<div class="top"><div class="who">${kris(84)}<h1>${NAME} på Campus</h1></div></div>
+  <div class="top"><span class="pill">Dag ${G.day}/${DAYS}</span><span class="pill">⚡ ${G.ap} val kvar</span></div>
+  ${C.map((c,i)=>`<div class="card"><div class="who"><div class="av">${c.e}</div><div style="flex:1"><div class="nm">${c.n}</div><div class="sub">${c.t} · 📍 ${loc(i)}</div></div><button data-i="${i}" ${G.talked[i]||!G.ap?'disabled':''}>Prata</button></div>
+  <div class="bar"><div style="width:${G.rel[i]}%"></div></div><div class="sub">${lvl(G.rel[i])} · ${G.rel[i]}/100${G.dated[i]?' · 💕 dejtat':''}</div></div>`).join('')}
+  <button class="big ${G.ap?'':'go'}" id="nd">${G.day>=DAYS?'Avsluta veckan':'Avsluta dagen'}</button>`;
+  $v.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>talk(+b.dataset.i));
+  document.getElementById('nd').onclick=nextDay;
+}
+function talk(i){
+  const c=C[i];
+  $v.innerHTML=`<div class="top"><span class="pill">${loc(i)}</span><span class="pill">⚡ ${G.ap}</span></div>
+  <div class="card"><div class="who"><div class="av">${c.e}</div><div class="nm">${c.n}</div></div><p class="line">${rnd(c.open)}</p></div>
+  <div class="who" style="margin:12px 0 2px">${kris(64)}<div class="sub">${NAME}: Vad säger du?</div></div>
+  ${Object.keys(ST).map(k=>`<button class="opt" data-k="${k}">${ST[k]}</button>`).join('')}`;
+  $v.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>pick(i,b.dataset.k));
+}
+function pick(i,k){
+  const c=C[i];let d=c.like[k]*6+Math.floor(Math.random()*5)-2;
+  if(k==='dristig'){if(G.rel[i]<25)d-=6;else if(G.rel[i]>=50)d+=6}
+  const before=G.rel[i];G.rel[i]=Math.max(0,Math.min(100,before+d));d=G.rel[i]-before;
+  const txt=d>=5?c.good[k]:d>=0?c.ok:c.bad;
+  let date='';
+  if(G.rel[i]>=80&&!G.dated[i]){G.dated[i]=1;date=`<div class="date"><b>💕 Dejt med ${c.n}!</b><p>${c.date}</p></div>`}
+  G.talked[i]=1;G.ap--;save();
+  $v.innerHTML=`<div class="card"><div class="who"><div class="av">${c.e}</div><div class="nm">${c.n}</div></div><p class="line">${txt}</p>
+  <div class="delta">${d>=0?'❤️ +'+d:'💔 '+d}</div><div class="bar"><div style="width:${G.rel[i]}%"></div></div><div class="sub">${lvl(G.rel[i])}</div>${date}</div>
+  <button class="big" id="c">Fortsätt</button>`;
+  document.getElementById('c').onclick=map;
+}
+function nextDay(){
+  if(G.day>=DAYS){G.over=true;save();return end()}
+  G.day++;G.ap=3;G.talked=[0,0,0,0];save();map();
+}
+function end(){
+  const t=total(),title=t<80?'Blyg nybörjare 🐣':t<160?'Charmig nykomling 😊':t<240?'Kampusens flörtmästare 💘':'SUPER-'+NAME.toUpperCase()+' ✨🌈';
+  $v.innerHTML=`<div class="center">${kris(140)}<h1>Veckan är slut!</h1><div class="card"><div class="sub">Din titel</div><div class="nm" style="font-size:24px;margin:6px 0">${title}</div><div class="sub">Totalt ${t} relationspoäng · ${G.dated.reduce((a,b)=>a+b,0)} dejter</div></div>
+  ${C.map((c,i)=>`<div class="card"><div class="who"><div class="av">${c.e}</div><div style="flex:1;text-align:left"><div class="nm">${c.n}</div><div class="sub">${lvl(G.rel[i])} · ${G.rel[i]}/100</div></div></div></div>`).join('')}
+  <button class="big go" id="re">Spela igen</button></div>`;
+  document.getElementById('re').onclick=()=>{G=fresh();save();map()};
+}
+map();
+</script>
+</body>
+</html>
