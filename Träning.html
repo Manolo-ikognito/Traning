@@ -8,22 +8,20 @@
 :root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#6b7280;--ac:#16a34a;--bd:#e5e7eb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--card:#181e26;--tx:#eef1f5;--mut:#9aa4b2;--ac:#34d399;--bd:#262e39}}
 :root[data-theme="dark"]{--bg:#0f1318;--card:#181e26;--tx:#eef1f5;--mut:#9aa4b2;--ac:#34d399;--bd:#262e39}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
 body{margin:0 auto;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;max-width:520px;padding:16px}
 h1{font-size:22px;margin:4px 0 14px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:14px}
 h2{font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;margin:0 0 10px}
 .big{font-size:30px;font-weight:700}
-.row{display:flex;gap:8px;align-items:center}
-.sp{justify-content:space-between}
-.wrap{flex-wrap:wrap}
+.row{display:flex;gap:8px;align-items:center}.sp{justify-content:space-between}.wrap{flex-wrap:wrap}
 .bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:10px 0 6px}
 .bar>div{height:100%;background:var(--ac);border-radius:6px;transition:width .3s}
 .mut{color:var(--mut);font-size:14px}
 button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:9px 12px;cursor:pointer}
 button.on,button.pri{background:var(--ac);color:#fff;border-color:var(--ac)}
 button.pri{width:100%;font-weight:600;margin-top:12px}
+button:disabled{opacity:.5}
 input,select{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);margin-top:8px}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
 .stat{text-align:center;background:var(--bg);border-radius:12px;padding:8px 2px}
@@ -36,12 +34,26 @@ input,select{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);bor
 .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--bd)}
 .item:first-child{border-top:0}
 .x{padding:4px 10px;color:var(--mut)}
-#toast{position:fixed;left:0;right:0;bottom:0;text-align:center;padding:0 16px calc(16px + env(safe-area-inset-bottom,0px));opacity:0;transition:opacity .3s;pointer-events:none}
-#toast{font-weight:600}
+#toast{position:fixed;left:0;right:0;bottom:0;text-align:center;font-weight:600;padding:0 16px calc(16px + env(safe-area-inset-bottom,0px));opacity:0;transition:opacity .3s;pointer-events:none}
 </style>
 </head>
 <body>
-<h1>💪 Träning</h1>
+<div id="boot" class="mut" style="text-align:center;margin-top:40vh">Laddar…</div>
+
+<div id="auth" style="display:none">
+  <h1>💪 Träning</h1>
+  <div class="card">
+    <h2>Logga in eller skapa konto</h2>
+    <input id="em" type="email" autocomplete="email" placeholder="Mejl">
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Lösenord (minst 6 tecken)">
+    <div class="mut" id="amsg" style="margin-top:8px"></div>
+    <button class="pri" id="li">Logga in</button>
+    <button id="su" style="width:100%;margin-top:8px">Skapa konto</button>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+<div class="row sp"><h1>💪 Träning</h1><div class="row"><span class="mut" id="who"></span><button id="lo">Logga ut</button></div></div>
 
 <div class="card">
   <h2>Den här veckan</h2>
@@ -82,30 +94,77 @@ input,select{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);bor
   <h2>Historik</h2>
   <div id="list"></div>
 </div>
+</div>
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <script>
-const K='trana-v2',ORD=['push','pull','legs'];
+const SB_URL='https://jgpaixttxntiytqtfbtg.supabase.co',SB_KEY='sb_publishable__MeXxMYTcINRG5qi5XGSRw_hL8ZKvl6';
+const ORD=['push','pull','legs'];
 const T={push:'Push',pull:'Pull',legs:'Ben',run:'Löpning'},EM={push:'🏋️',pull:'🧗',legs:'🦵',run:'🏃'};
 const DEF={push:['Bänkpress','Axelpress','Lutande hantelpress','Sidolyft','Triceps pushdown','Dips'],pull:['Chins','Skivstångsrodd','Sittande rodd','Face pull','Bicepscurl','Latsdrag'],legs:['Knäböj','Rumänsk marklyft','Benpress','Bensparkar','Hamstringscurl','Vadpress']};
-let S={goal:6,custom:{push:[],pull:[],legs:[]},sessions:[]};
-try{const r=JSON.parse(localStorage.getItem(K));if(r&&r.sessions)S=r}catch(e){}
-S.custom=S.custom||{push:[],pull:[],legs:[]};
 const $=id=>document.getElementById(id);
 const esc=t=>String(t).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+let sb,U=null,S={goal:6,custom:{push:[],pull:[],legs:[]},sessions:[]},D={type:'push',ex:{},act:null},tt;
 const iso=d=>new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
 const shift=(w,n)=>{const d=new Date(w+'T12:00:00');d.setDate(d.getDate()+n);return iso(d)};
 const monday=s=>shift(s,-((new Date(s+'T12:00:00').getDay()+6)%7));
 const cnt=w=>S.sessions.filter(s=>monday(s.date)===w).length;
-const sorted=()=>[...S.sessions].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+const cmp=(a,b)=>b.date.localeCompare(a.date)||String(b.ts||'').localeCompare(String(a.ts||''));
+const sorted=()=>[...S.sessions].sort(cmp);
 const exList=t=>[...DEF[t],...(S.custom[t]||[])];
 const find=n=>{for(const s of sorted()){const e=(s.ex||[]).find(e=>e.n===n);if(e)return{s,e}}return null};
 const pr=n=>{let m=0;S.sessions.forEach(s=>(s.ex||[]).forEach(e=>{if(e.n===n)e.s.forEach(x=>{if(x[0]>m)m=x[0]})}));return m};
 const nextType=()=>{const g=sorted().find(s=>s.type!=='run');return g?ORD[(ORD.indexOf(g.type)+1)%3]:'push'};
-let D={type:nextType(),ex:{},act:null},tt;
-function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,2200)}
+function toast(m){const t=$('toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,2400)}
+function show(id){['boot','auth','app'].forEach(x=>$(x).style.display=x===id?'':'none')}
 
+/* ---------- inloggning ---------- */
+const amsg=m=>$('amsg').textContent=m;
+const tr=m=>/Invalid login/i.test(m)?'Fel mejl eller lösenord':/already registered/i.test(m)?'Mejlen används redan, logga in istället':/at least 6/i.test(m)?'Lösenordet måste vara minst 6 tecken':m;
+async function auth(kind){
+  const email=$('em').value.trim(),password=$('pw').value;
+  if(!email||!password)return amsg('Fyll i mejl och lösenord');
+  amsg('Vänta…');
+  const r=kind==='in'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});
+  if(r.error)return amsg(tr(r.error.message));
+  if(!r.data.session)return amsg('Kolla din mejl och bekräfta kontot, logga sedan in.');
+  amsg('');enter(r.data.user);
+}
+$('li').onclick=()=>auth('in');$('su').onclick=()=>auth('up');
+$('pw').onkeydown=e=>{if(e.key==='Enter')auth('in')};
+$('lo').onclick=async()=>{await sb.auth.signOut();U=null;S={goal:6,custom:{push:[],pull:[],legs:[]},sessions:[]};$('pw').value='';show('auth')};
+
+/* ---------- data ---------- */
+async function load(){
+  const [a,b]=await Promise.all([sb.from('sessions').select('*').order('date',{ascending:false}).limit(2000),sb.from('settings').select('*').maybeSingle()]);
+  if(a.error){toast('Kunde inte hämta dina pass');return}
+  S.sessions=a.data.map(r=>({id:r.id,date:r.date,type:r.type,ts:r.created_at,...r.data}));
+  if(b.data){S.goal=b.data.goal;S.custom=b.data.custom||{push:[],pull:[],legs:[]}}
+}
+async function saveSettings(){
+  const {error}=await sb.from('settings').upsert({user_id:U.id,goal:S.goal,custom:S.custom});
+  if(error)toast('Kunde inte spara inställningar');
+}
+async function maybeImport(){
+  if(S.sessions.length||localStorage.getItem('trana-imported'))return;
+  let old;try{old=JSON.parse(localStorage.getItem('trana-v2'))}catch(e){}
+  if(!old||!old.sessions||!old.sessions.length)return;
+  try{localStorage.setItem('trana-imported','1')}catch(e){}
+  if(!confirm('Importera '+old.sessions.length+' pass som sparats på den här enheten till ditt konto?'))return;
+  const rows=old.sessions.map(s=>{const {id,date,type,...data}=s;return{date,type,data}});
+  const {error}=await sb.from('sessions').insert(rows);
+  if(error)return toast('Importen misslyckades');
+  S.goal=old.goal||6;S.custom=old.custom||S.custom;await saveSettings();await load();
+}
+async function enter(user){
+  U=user;$('who').textContent=user.email;show('boot');
+  await load();await maybeImport();
+  D={type:nextType(),ex:{},act:null};$('date').value=iso(new Date());
+  show('app');renderAll();
+}
+
+/* ---------- vyer ---------- */
 function renderWeek(){
   const cur=monday(iso(new Date())),wk=S.sessions.filter(s=>monday(s.date)===cur),c=wk.length;
   $('stats').innerHTML=['push','pull','legs','run'].map(t=>`<div class="stat"><div>${EM[t]}</div><b>${wk.filter(s=>s.type===t).length}</b><span>${T[t]}</span></div>`).join('');
@@ -134,7 +193,7 @@ function renderProg(){
   if(!names.length){$('pchart').innerHTML='';$('pinfo').textContent='Logga några gympass för att se din utveckling.';sel.style.display='none';return}
   sel.style.display='';
   const n=sel.value;
-  const pts=S.sessions.filter(s=>(s.ex||[]).some(e=>e.n===n)).sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id).slice(-8).map(s=>Math.max(...s.ex.find(e=>e.n===n).s.map(x=>x[0])));
+  const pts=S.sessions.filter(s=>(s.ex||[]).some(e=>e.n===n)).sort((a,b)=>-cmp(a,b)).slice(-8).map(s=>Math.max(...s.ex.find(e=>e.n===n).s.map(x=>x[0])));
   const mx=Math.max(...pts,1);
   $('pchart').innerHTML=pts.map(k=>`<div style="height:${k/mx*100}%" title="${k} kg"></div>`).join('');
   $('pinfo').textContent='Tyngsta set per pass: '+pts.join(' → ')+' kg';
@@ -149,9 +208,10 @@ function renderHist(){
 }
 const renderAll=()=>{renderWeek();renderLog();renderProg();renderHist()};
 
+/* ---------- händelser ---------- */
 $('types').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;if(D.type!==b.dataset.t)D={type:b.dataset.t,ex:{},act:null};renderLog()};
 $('exs').onclick=e=>{const b=e.target.closest('[data-n]');if(!b)return;D.act=b.dataset.n;renderLog()};
-$('cxadd').onclick=()=>{const n=$('cx').value.trim();if(!n)return;if(!exList(D.type).includes(n)){S.custom[D.type]=S.custom[D.type]||[];S.custom[D.type].push(n)}D.act=n;$('cx').value='';save();renderLog()};
+$('cxadd').onclick=()=>{const n=$('cx').value.trim();if(!n)return;if(!exList(D.type).includes(n)){S.custom[D.type]=S.custom[D.type]||[];S.custom[D.type].push(n);saveSettings()}D.act=n;$('cx').value='';renderLog()};
 $('addset').onclick=()=>{
   const kg=parseFloat($('kg').value.replace(',','.')),rp=parseInt($('rp').value);
   if(!(rp>0)||!(kg>=0))return toast('Fyll i kg och reps');
@@ -160,25 +220,43 @@ $('addset').onclick=()=>{
   renderLog();
 };
 $('sets').onclick=e=>{const b=e.target.closest('[data-d]');if(!b)return;D.ex[D.act].splice(+b.dataset.d,1);renderLog()};
-$('save').onclick=()=>{
-  const date=$('date').value||iso(new Date()),id=Date.now();
-  if(D.type==='run'){
+$('save').onclick=async()=>{
+  const date=$('date').value||iso(new Date()),type=D.type;let data;
+  if(type==='run'){
     const km=parseFloat($('km').value.replace(',','.'))||0,min=parseFloat($('min').value)||0;
     if(!km&&!min)return toast('Fyll i km eller minuter');
-    S.sessions.push({id,date,type:'run',km,min});$('km').value='';$('min').value='';
+    data={km,min};
   }else{
     const ex=Object.entries(D.ex).filter(([n,s])=>s.length).map(([n,s])=>({n,s}));
     if(!ex.length)return toast('Lägg till minst ett set');
-    S.sessions.push({id,date,type:D.type,ex});
+    data={ex};
   }
-  save();D={type:nextType(),ex:{},act:null};toast('Pass sparat ✔');renderAll();
+  $('save').disabled=true;
+  const {data:r,error}=await sb.from('sessions').insert({date,type,data}).select().single();
+  $('save').disabled=false;
+  if(error)return toast('Kunde inte spara, försök igen');
+  S.sessions.push({id:r.id,date:r.date,type:r.type,ts:r.created_at,...r.data});
+  if(type==='run'){$('km').value='';$('min').value=''}
+  D={type:nextType(),ex:{},act:null};toast('Pass sparat ✔');renderAll();
 };
-$('gm').onclick=()=>{S.goal=Math.max(1,S.goal-1);save();renderWeek()};
-$('gp').onclick=()=>{S.goal=Math.min(14,S.goal+1);save();renderWeek()};
+$('gm').onclick=()=>{S.goal=Math.max(1,S.goal-1);saveSettings();renderWeek()};
+$('gp').onclick=()=>{S.goal=Math.min(14,S.goal+1);saveSettings();renderWeek()};
 $('ps').onchange=renderProg;
-$('list').onclick=e=>{const b=e.target.closest('[data-id]');if(!b)return;S.sessions=S.sessions.filter(s=>String(s.id)!==b.dataset.id);save();renderAll()};
-$('date').value=iso(new Date());
-renderAll();
+$('list').onclick=async e=>{
+  const b=e.target.closest('[data-id]');if(!b)return;const id=b.dataset.id;
+  const {error}=await sb.from('sessions').delete().eq('id',id);
+  if(error)return toast('Kunde inte ta bort');
+  S.sessions=S.sessions.filter(s=>String(s.id)!==id);renderAll();
+};
+
+/* ---------- start ---------- */
+(async()=>{
+  try{
+    sb=supabase.createClient(SB_URL,SB_KEY);
+    const {data}=await sb.auth.getSession();
+    if(data.session)enter(data.session.user);else show('auth');
+  }catch(e){$('boot').textContent='Kunde inte ladda inloggningen. Kontrollera internetanslutningen.'}
+})();
 </script>
 </body>
 </html>
